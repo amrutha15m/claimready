@@ -4,7 +4,7 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ClaimReady AI — the insurance-desk copilot for Superleap CRM",
+  title: "ClaimReady AI - the insurance-desk copilot for Superleap CRM",
   description:
     "ClaimReady prepares and tracks every cashless claim from pre-auth to discharge, so the hospital insurance desk clears beds faster and protects revenue.",
 };

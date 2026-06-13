@@ -130,7 +130,7 @@ export function CopilotRail({
                     {draft}
                   </div>
                   <p className="mt-2 text-xs text-muted">
-                    Review before sending — you stay in control.
+                    Review before sending. You stay in control.
                   </p>
                   <button
                     onClick={send}
@@ -193,7 +193,7 @@ export function CopilotRail({
                 </dd>
               </div>
               <p className="pt-1 text-xs leading-relaxed text-brand-dark">
-                Clean claim submitted. Faster collection — fewer days in AR.
+                Clean claim submitted. Faster collection, fewer days in AR.
               </p>
             </dl>
           )}

@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import {
@@ -5,6 +8,7 @@ import {
   claims,
   readinessMeta,
   summarize,
+  type Readiness,
 } from "@/lib/data/claims";
 
 function inr(n: number) {
@@ -12,11 +16,35 @@ function inr(n: number) {
 }
 
 export default function DashboardPage() {
+  const [filter, setFilter] = useState<Readiness | null>(null);
+
   const s = summarize(claims);
   const sorted = [...claims].sort((a, b) => {
     const order = { blocked: 0, atrisk: 1, ready: 2 } as const;
     return order[a.readiness] - order[b.readiness];
   });
+
+  const displayed = filter ? sorted.filter((c) => c.readiness === filter) : sorted;
+
+  function toggleFilter(f: Readiness) {
+    setFilter((prev) => (prev === f ? null : f));
+  }
+
+  const filterCards: { k: string; v: number; f: Readiness }[] = [
+    { k: "Ready", v: s.ready, f: "ready" },
+    { k: "At risk", v: s.atrisk, f: "atrisk" },
+    { k: "Blocked", v: s.blocked, f: "blocked" },
+  ];
+
+  const dotColor: Record<Readiness, string> = {
+    ready: "#13A05C",
+    atrisk: "#E0A23B",
+    blocked: "#DC4C4C",
+  };
+
+  const tableLabel = filter
+    ? `${readinessMeta[filter].label} claims`
+    : "Claims, sorted risk-first";
 
   return (
     <main className="min-h-screen bg-surface/50">
@@ -45,31 +73,61 @@ export default function DashboardPage() {
         </h1>
 
         <dl className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+          {filterCards.map(({ k, v, f }) => {
+            const active = filter === f;
+            return (
+              <button
+                key={k}
+                onClick={() => toggleFilter(f)}
+                className={`rounded-card border p-4 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${
+                  active
+                    ? "border-brand bg-brand/[0.05] shadow-sm"
+                    : "border-hairline bg-canvas hover:border-brand/40 hover:bg-surface/60"
+                }`}
+              >
+                <dt className="flex items-center gap-1.5 text-xs text-muted">
+                  {active && (
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: dotColor[f] }}
+                      aria-hidden
+                    />
+                  )}
+                  {k}
+                </dt>
+                <dd className="mt-1 text-xl font-semibold text-ink tnum">{v}</dd>
+              </button>
+            );
+          })}
+
           {[
-            { k: "Ready", v: s.ready },
-            { k: "At risk", v: s.atrisk },
-            { k: "Blocked", v: s.blocked },
             { k: "Beds at risk", v: s.bedsAtRisk },
             { k: "₹ blocked", v: inr(s.blockedRevenue) },
-          ].map((stat) => (
+          ].map(({ k, v }) => (
             <div
-              key={stat.k}
+              key={k}
               className="rounded-card border border-hairline bg-canvas p-4"
             >
-              <dt className="text-xs text-muted">{stat.k}</dt>
-              <dd className="mt-1 text-xl font-semibold text-ink tnum">
-                {stat.v}
-              </dd>
+              <dt className="text-xs text-muted">{k}</dt>
+              <dd className="mt-1 text-xl font-semibold text-ink tnum">{v}</dd>
             </div>
           ))}
         </dl>
 
         <div className="mt-6 overflow-hidden rounded-card border border-hairline bg-canvas">
-          <div className="border-b border-hairline px-5 py-3 text-sm text-muted">
-            Claims, sorted risk-first
+          <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
+            <span className="text-sm text-muted">{tableLabel}</span>
+            {filter && (
+              <button
+                onClick={() => setFilter(null)}
+                className="text-xs text-muted transition-colors hover:text-ink"
+              >
+                Clear filter ×
+              </button>
+            )}
           </div>
           <ul className="divide-y divide-hairline">
-            {sorted.map((c) => {
+            {displayed.map((c) => {
               const m = readinessMeta[c.readiness];
               return (
                 <li key={c.id}>
@@ -98,6 +156,11 @@ export default function DashboardPage() {
                 </li>
               );
             })}
+            {displayed.length === 0 && (
+              <li className="px-5 py-8 text-center text-sm text-muted">
+                No claims in this category.
+              </li>
+            )}
           </ul>
         </div>
 

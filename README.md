@@ -1,7 +1,7 @@
 # ClaimReady AI
 
 An AI module for **Superleap CRM** that prepares and tracks every cashless
-insurance claim from pre-auth to discharge — so a hospital's insurance desk
+insurance claim from pre-auth to discharge, so a hospital's insurance desk
 clears beds within the regulatory clock and stops revenue from sitting in a
 blocked ward.
 
@@ -32,21 +32,6 @@ race.
 - Geist font
 - Seeded, deterministic demo data — **no backend, no live API, no real patient
   data**, so the demo behaves identically every time.
-
-## Run locally
-
-```bash
-npm install
-npm run dev
-# open http://localhost:3000
-```
-
-## Deploy to Vercel
-
-1. Push this repo to GitHub.
-2. Import it at [vercel.com/new](https://vercel.com/new) — Next.js is detected
-   automatically; no configuration needed.
-3. Deploy. Submit the resulting `*.vercel.app` URL plus this repo link.
 
 ## Structure
 

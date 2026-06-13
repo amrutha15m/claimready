@@ -32,6 +32,8 @@ export type Claim = {
   blocker: string | null;
   blockerType: BlockerType;
   admittedAgoHours: number;
+  physician: string;
+  diagnosis: string;
   policy: Policy;
   documents: DocItem[];
   timeline: TimelineEvent[];
@@ -71,9 +73,11 @@ export const claims: Claim[] = [
     approvedAmount: 120000,
     billedAmount: 184000,
     readiness: "blocked",
-    blocker: "Enhancement pending — billed exceeds approved by ₹64,000",
+    blocker: "Enhancement pending: billed exceeds approved by ₹64,000",
     blockerType: "enhancement",
     admittedAgoHours: 52,
+    physician: "Dr. Menon",
+    diagnosis: "Post-operative respiratory failure",
     policy: {
       sumInsured: 500000,
       roomRentCap: "₹8,000 / day",
@@ -85,8 +89,8 @@ export const claims: Claim[] = [
       { stage: "Admission", detail: "Cashless intimation sent", state: "done", time: "Day 1, 09:10" },
       { stage: "Pre-auth approved", detail: "₹1,20,000 authorized", state: "done", time: "Day 1, 09:52" },
       { stage: "Treatment", detail: "Extended ICU stay", state: "done", time: "Day 1–3" },
-      { stage: "Final bill", detail: "₹1,84,000 — exceeds approval", state: "active", time: "Now" },
-      { stage: "Discharge", detail: "Awaiting enhancement", state: "pending", time: "—" },
+      { stage: "Final bill", detail: "₹1,84,000 (exceeds approval)", state: "active", time: "Now" },
+      { stage: "Discharge", detail: "Awaiting enhancement", state: "pending", time: "-" },
     ],
   },
   {
@@ -98,9 +102,11 @@ export const claims: Claim[] = [
     approvedAmount: 90000,
     billedAmount: 88000,
     readiness: "blocked",
-    blocker: "TPA query open — discharge summary clarification requested",
+    blocker: "TPA query open: discharge summary clarification requested",
     blockerType: "query",
     admittedAgoHours: 33,
+    physician: "Dr. Rao",
+    diagnosis: "Acute bacterial pneumonia",
     queryText:
       "Please clarify the line of treatment in the discharge summary and confirm the duration of IV antibiotics, with supporting clinical notes.",
     policy: {
@@ -130,6 +136,8 @@ export const claims: Claim[] = [
     blocker: "Discharge summary unsigned by treating physician",
     blockerType: "signoff",
     admittedAgoHours: 27,
+    physician: "Dr. Menon",
+    diagnosis: "Acute appendicitis",
     policy: {
       sumInsured: 400000,
       roomRentCap: "₹6,000 / day",
@@ -157,11 +165,13 @@ export const claims: Claim[] = [
     blocker: null,
     blockerType: null,
     admittedAgoHours: 19,
+    physician: "Dr. Sharma",
+    diagnosis: "Type 2 diabetes mellitus",
     policy: {
       sumInsured: 250000,
       roomRentCap: "₹4,000 / day",
       coPay: "Nil",
-      note: "Clean claim — all documents complete and within approval.",
+      note: "Clean claim. All documents complete and within approval.",
     },
     documents: baseDocs(),
     timeline: [
@@ -184,11 +194,13 @@ export const claims: Claim[] = [
     blocker: null,
     blockerType: null,
     admittedAgoHours: 41,
+    physician: "Dr. Menon",
+    diagnosis: "Coronary artery disease",
     policy: {
       sumInsured: 600000,
       roomRentCap: "₹10,000 / day",
       coPay: "10%",
-      note: "Clean claim — complete and within approval.",
+      note: "Clean claim. Complete and within approval.",
     },
     documents: baseDocs(),
     timeline: [
@@ -222,4 +234,114 @@ export function summarize(list: Claim[]) {
     .filter((c) => c.readiness !== "ready")
     .reduce((sum, c) => sum + c.billedAmount, 0);
   return { ready, atrisk, blocked, bedsAtRisk: atrisk + blocked, blockedRevenue };
+}
+
+// ── document preview ──────────────────────────────────────────────────────────
+
+export type DocPreviewField = { label: string; value: string };
+export type DocPreview = {
+  fields: DocPreviewField[];
+  badge?: string;
+  warning?: string;
+};
+
+export function getDocPreview(claim: Claim, doc: DocItem): DocPreview | null {
+  const n = doc.name.toLowerCase();
+  const treatmentDetail =
+    claim.timeline.find((e) => e.stage === "Treatment")?.detail ?? "Completed";
+
+  if (n.includes("pre-auth")) {
+    return {
+      fields: [
+        { label: "Authorized amount", value: inr(claim.approvedAmount) },
+        { label: "Payer / TPA", value: `${claim.payer} / ${claim.tpa}` },
+        { label: "Validity", value: "Until discharge" },
+        { label: "Status", value: "Approved" },
+      ],
+    };
+  }
+
+  if (n.includes("policy")) {
+    return {
+      fields: [
+        { label: "Policyholder", value: claim.patient },
+        { label: "Sum insured", value: inr(claim.policy.sumInsured) },
+        { label: "Room-rent cap", value: claim.policy.roomRentCap },
+        { label: "Co-pay", value: claim.policy.coPay },
+      ],
+    };
+  }
+
+  if (n.includes("clinical")) {
+    return {
+      fields: [
+        { label: "Attending physician", value: claim.physician },
+        { label: "Diagnosis", value: claim.diagnosis },
+        { label: "Line of treatment", value: treatmentDetail },
+        {
+          label: "Notes",
+          value:
+            treatmentDetail === "Completed"
+              ? `Admitted ${claim.admittedAgoHours}h ago. Treatment concluded without documented complications.`
+              : `Admitted ${claim.admittedAgoHours}h ago. Treatment ongoing as documented.`,
+        },
+      ],
+    };
+  }
+
+  if (n.includes("justification")) {
+    return {
+      badge: "AI-structured",
+      fields: [
+        { label: "Diagnosis", value: claim.diagnosis },
+        {
+          label: "Medical necessity",
+          value: `${treatmentDetail} indicated for ${claim.diagnosis.toLowerCase()}.`,
+        },
+        { label: "Source", value: "Structured by ClaimReady from clinical notes" },
+      ],
+      warning:
+        doc.status === "review"
+          ? "Awaiting physician sign-off. Request it from the copilot."
+          : undefined,
+    };
+  }
+
+  if (n.includes("bill")) {
+    const roomPart = Math.round((claim.billedAmount * 0.35) / 1000) * 1000;
+    const procPart = claim.billedAmount - roomPart;
+    return {
+      fields: [
+        { label: "Room & nursing", value: inr(roomPart) },
+        { label: "Procedures & medicines", value: inr(procPart) },
+        { label: "Total billed", value: inr(claim.billedAmount) },
+      ],
+    };
+  }
+
+  if (n.includes("discharge summary")) {
+    return {
+      fields: [
+        { label: "Diagnosis", value: claim.diagnosis },
+        {
+          label: "Discharge advice",
+          value: "Follow up with treating physician. Medications as prescribed.",
+        },
+      ],
+      warning:
+        doc.status === "review"
+          ? "Pending physician sign-off before the claim can clear."
+          : undefined,
+    };
+  }
+
+  if (n.includes("enhancement") || n.includes("query response")) {
+    return {
+      fields: [
+        { label: "Status", value: `Drafted by ClaimReady and sent to ${claim.tpa}` },
+      ],
+    };
+  }
+
+  return null;
 }

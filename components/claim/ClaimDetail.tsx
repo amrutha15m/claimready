@@ -38,7 +38,7 @@ export function ClaimDetail({ claim }: { claim: Claim }) {
     });
     setResolved(true);
     setToast(
-      `Bed ${claim.bed} is ready — discharge will clear within the 3-hour window.`
+      `Bed ${claim.bed} is ready. Discharge will clear within the 3-hour window.`
     );
   }
 
@@ -52,10 +52,10 @@ export function ClaimDetail({ claim }: { claim: Claim }) {
 
   const verdict =
     readiness === "ready"
-      ? "Ready — discharge will clear within the 3-hour window."
+      ? "Ready. Discharge will clear within the 3-hour window."
       : readiness === "atrisk"
-      ? `Almost ready — ${claim.blocker}`
-      : `Not ready — ${claim.blocker}`;
+      ? `Almost ready: ${claim.blocker}`
+      : `Not ready: ${claim.blocker}`;
 
   const verdictTone =
     readiness === "ready"
@@ -118,7 +118,7 @@ export function ClaimDetail({ claim }: { claim: Claim }) {
         <div className="mt-6 grid gap-5 lg:grid-cols-3">
           <div className="space-y-5 lg:col-span-2">
             <Timeline events={timeline} />
-            <DocumentMap docs={docs} />
+            <DocumentMap docs={docs} claim={claim} />
             <PolicyPanel
               policy={claim.policy}
               approved={claim.approvedAmount}
